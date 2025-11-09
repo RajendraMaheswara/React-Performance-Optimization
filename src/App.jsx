@@ -1,14 +1,13 @@
-// src/App.jsx
-import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { products } from './data/products';
 import SearchBar from './components/SearchBar';
 import ProductList from './components/ProductList';
-import { getFromCache, setToCache } from './utils/searchCache';
 
-// Lazy load halaman About
+// Lazy load halaman "Tentang"
 const AboutPage = lazy(() => import('./components/AboutPage'));
 
-// Helper localStorage
+// Helper untuk localStorage keranjang
 const saveCartToStorage = (cart) => {
   localStorage.setItem('pos-cart', JSON.stringify(cart));
 };
@@ -21,48 +20,44 @@ const loadCartFromStorage = () => {
   }
 };
 
+// Simulasi “fetch” produk berdasarkan kata pencarian (anggap dari server)
+const fetchProducts = async (term) => {
+  const lower = term.toLowerCase().trim();
+  if (!lower) return products;
+
+  // simulasi delay 300ms
+  await new Promise((r) => setTimeout(r, 300));
+
+  // filter produk (logika pencarian sama seperti sebelumnya)
+  return products.filter(
+    (p) =>
+      p.name.toLowerCase().includes(lower) ||
+      p.brand.toLowerCase().includes(lower) ||
+      p.category.toLowerCase().includes(lower)
+  );
+};
+
 function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [cart, setCart] = useState(() => loadCartFromStorage());
-  const [view, setView] = useState('pos'); // navigasi antar halaman
-  const [cacheHit, setCacheHit] = useState(false); // <=== indikator cache
+  const [view, setView] = useState('pos');
 
-  // simpan cart setiap berubah
+  // Simpan keranjang setiap kali berubah
   useEffect(() => {
     saveCartToStorage(cart);
   }, [cart]);
 
-  // 🔍 Fungsi pembantu dengan cache
-  const filterProducts = (term) => {
-    if (!term.trim()) {
-      setCacheHit(false);
-      return products;
-    }
-
-    const cacheKey = term.toLowerCase().trim();
-    const cached = getFromCache(cacheKey);
-    if (cached) {
-      console.log('🎯 Cache hit:', cacheKey);
-      setCacheHit(true);
-      return cached;
-    }
-
-    console.log('🔍 Cache miss:', cacheKey);
-    setCacheHit(false);
-
-    const filtered = products.filter(
-      (p) =>
-        p.name.toLowerCase().includes(cacheKey) ||
-        p.brand.toLowerCase().includes(cacheKey) ||
-        p.category.toLowerCase().includes(cacheKey)
-    );
-
-    setToCache(cacheKey, filtered);
-    return filtered;
-  };
-
-  // ⏱️ gunakan useMemo agar tidak filter ulang dalam render yang sama
-  const filteredProducts = useMemo(() => filterProducts(searchTerm), [searchTerm]);
+  // Gunakan React Query untuk caching otomatis
+  const {
+    data: filteredProducts = [],
+    isFetching,
+    isSuccess,
+  } = useQuery({
+    queryKey: ['products', searchTerm],
+    queryFn: () => fetchProducts(searchTerm),
+    staleTime: 5 * 60 * 1000, // data tetap valid selama 5 menit
+    cacheTime: 30 * 60 * 1000, // tetap tersimpan di cache selama 30 menit
+  });
 
   const handleAddToCart = (product) => {
     setCart((prev) => {
@@ -81,36 +76,68 @@ function App() {
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  // === UI ===
+  // ===== UI =====
   return (
-    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif', maxWidth: '800px', margin: '0 auto' }}>
+    <div
+      style={{
+        padding: '20px',
+        fontFamily: 'Arial, sans-serif',
+        maxWidth: '800px',
+        margin: '0 auto',
+      }}
+    >
       <h1>🛒 Point of Sales (POS)</h1>
 
-      {/* Navigasi */}
+      {/* Navigasi sederhana */}
       <div style={{ marginBottom: '20px' }}>
         <button onClick={() => setView('pos')}>POS</button>
-        <button onClick={() => setView('about')} style={{ marginLeft: '10px' }}>
+        <button
+          onClick={() => setView('about')}
+          style={{ marginLeft: '10px' }}
+        >
           Tentang
         </button>
       </div>
 
       {view === 'pos' ? (
         <>
-          <div style={{ backgroundColor: '#e8f5e9', padding: '12px', borderRadius: '6px', marginBottom: '20px' }}>
+          {/* Ringkasan keranjang */}
+          <div
+            style={{
+              backgroundColor: '#e8f5e9',
+              padding: '12px',
+              borderRadius: '6px',
+              marginBottom: '20px',
+            }}
+          >
             <strong>Keranjang:</strong> {totalItems} item
           </div>
 
+          {/* Search */}
           <SearchBar onSearch={setSearchTerm} />
 
-          {/* indikator hasil cache */}
-          {searchTerm && (
-            <small style={{ color: cacheHit ? 'green' : 'gray' }}>
-              {cacheHit ? '✅ Hasil dari cache' : '🔍 Hasil baru dihitung'}
+          {/* Indikator cache/status query */}
+          {isFetching ? (
+            <small style={{ color: 'gray' }}>⏳ Memuat data...</small>
+          ) : isSuccess && searchTerm ? (
+            <small style={{ color: 'green' }}>
+              ✅ Data diambil dari cache React Query
             </small>
-          )}
+          ) : null}
 
-          <div style={{ border: '1px solid #ddd', borderRadius: '8px', overflow: 'hidden' }}>
-            <ProductList filteredProducts={filteredProducts} onAddToCart={handleAddToCart} />
+          {/* Daftar produk */}
+          <div
+            style={{
+              border: '1px solid #ddd',
+              borderRadius: '8px',
+              overflow: 'hidden',
+              marginTop: '10px',
+            }}
+          >
+            <ProductList
+              filteredProducts={filteredProducts}
+              onAddToCart={handleAddToCart}
+            />
           </div>
         </>
       ) : (
