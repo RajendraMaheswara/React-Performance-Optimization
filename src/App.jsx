@@ -78,38 +78,19 @@ function App() {
 
   // ===== UI =====
   return (
-    <div
-      style={{
-        padding: '20px',
-        fontFamily: 'Arial, sans-serif',
-        maxWidth: '800px',
-        margin: '0 auto',
-      }}
-    >
+    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif', maxWidth: '800px', margin: '0 auto', }}>
       <h1>🛒 Point of Sales (POS)</h1>
 
       {/* Navigasi sederhana */}
       <div style={{ marginBottom: '20px' }}>
         <button onClick={() => setView('pos')}>POS</button>
-        <button
-          onClick={() => setView('about')}
-          style={{ marginLeft: '10px' }}
-        >
-          Tentang
-        </button>
+        <button onClick={() => setView('about')} style={{ marginLeft: '10px' }}> Tentang </button>
       </div>
 
       {view === 'pos' ? (
         <>
           {/* Ringkasan keranjang */}
-          <div
-            style={{
-              backgroundColor: '#e8f5e9',
-              padding: '12px',
-              borderRadius: '6px',
-              marginBottom: '20px',
-            }}
-          >
+          <div style={{backgroundColor: '#e8f5e9', padding: '12px', borderRadius: '6px', marginBottom: '20px', }} >
             <strong>Keranjang:</strong> {totalItems} item
           </div>
 
@@ -126,18 +107,8 @@ function App() {
           ) : null}
 
           {/* Daftar produk */}
-          <div
-            style={{
-              border: '1px solid #ddd',
-              borderRadius: '8px',
-              overflow: 'hidden',
-              marginTop: '10px',
-            }}
-          >
-            <ProductList
-              filteredProducts={filteredProducts}
-              onAddToCart={handleAddToCart}
-            />
+          <div style={{ border: '1px solid #ddd', borderRadius: '8px', overflow: 'hidden', marginTop: '10px', }} >
+            <ProductList filteredProducts={filteredProducts}onAddToCart={handleAddToCart}/>
           </div>
         </>
       ) : (
